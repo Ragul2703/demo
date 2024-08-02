@@ -110,5 +110,5 @@ app.get('/courses', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${PORT}`); // Corrected the variable name to PORT
 });
