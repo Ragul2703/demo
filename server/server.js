@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const multer = require('multer');
+const multerS3 = require('multer-s3');
+const aws = require('aws-sdk');
 const path = require('path');
 
 dotenv.config(); // Initialize dotenv
@@ -40,10 +42,29 @@ const courseSchema = new mongoose.Schema({
 const Course = mongoose.models.Course || mongoose.model('Course', courseSchema);
 
 app.use(cors()); // Enable CORS
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Set up multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure AWS SDK
+aws.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+// Set up multer to use S3 for file storage
+const s3 = new aws.S3();
+const upload = multer({
+  storage: multerS3({
+    s3,
+    bucket: process.env.S3_BUCKET_NAME,
+    acl: 'public-read',
+    metadata: (req, file, cb) => {
+      cb(null, { fieldName: file.fieldname });
+    },
+    key: (req, file, cb) => {
+      cb(null, Date.now().toString() + path.extname(file.originalname));
+    },
+  }),
+});
 
 app.get("/demo", (req, res) => {
   res.send("DemoPages");
@@ -78,8 +99,8 @@ app.post('/upload', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: '
   try {
     const course = new Course({
       description,
-      thumbnailUrl: `http://localhost:${PORT}/uploads/${thumbnail.filename}`,
-      videoUrl: `http://localhost:${PORT}/uploads/${video.filename}`,
+      thumbnailUrl: thumbnail.location,
+      videoUrl: video.location,
     });
 
     await course.save();
@@ -106,11 +127,3 @@ app.get('/courses', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-// Suppress warnings (not recommended for production)
-process.emitWarning = (warning, type, code, ctor) => {
-  if (type === 'ExperimentalWarning') {
-    return;
-  }
-  return process.emitWarning(warning, type, code, ctor);
-};
