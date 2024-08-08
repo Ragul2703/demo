@@ -60,6 +60,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+app.get('/hello', async (req, res) => {
+  res.send("Hello");
+})
+
+
 // Login endpoint
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
