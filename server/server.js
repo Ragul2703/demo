@@ -17,7 +17,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit process if there is a connection error
+  });
 
 // Define the User schema and model, ensuring we do not overwrite the model if it already exists
 const userSchema = new mongoose.Schema({
@@ -57,6 +60,7 @@ app.post('/logins', async (req, res) => {
       res.status(400).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
+    console.error('Error during login:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -82,6 +86,7 @@ app.post('/upload', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: '
 
     res.status(200).json({ message: 'Upload successful!' });
   } catch (error) {
+    console.error('Error during course upload:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -92,6 +97,7 @@ app.get('/courses', async (req, res) => {
     const courses = await Course.find();
     res.json(courses);
   } catch (error) {
+    console.error('Error fetching courses:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
