@@ -106,3 +106,11 @@ app.get('/courses', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+// Suppress warnings (not recommended for production)
+process.emitWarning = (warning, type, code, ctor) => {
+  if (type === 'ExperimentalWarning') {
+    return;
+  }
+  return process.emitWarning(warning, type, code, ctor);
+};
