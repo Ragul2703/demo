@@ -5,7 +5,6 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
 dotenv.config(); // Initialize dotenv
 
@@ -16,27 +15,26 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
+// Define the User schema and model, ensuring we do not overwrite the model if it already exists
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
+// Define the Course schema and model, ensuring we do not overwrite the model if it already exists
 const courseSchema = new mongoose.Schema({
   description: String,
   thumbnailUrl: String,
   videoUrl: String,
 });
 
-const Course = mongoose.model('Course', courseSchema);
+const Course = mongoose.models.Course || mongoose.model('Course', courseSchema);
 
 app.use(cors()); // Enable CORS
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -45,8 +43,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const upload = multer({ dest: 'uploads/' });
 
 app.get("/demo", (req, res) => {
-  res.send("DemoPages")
-})
+  res.send("DemoPages");
+});
 
 // User login route
 app.post('/logins', async (req, res) => {
