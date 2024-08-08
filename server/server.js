@@ -12,12 +12,8 @@ dotenv.config(); // Initialize dotenv
 const app = express();
 const PORT = process.env.PORT || 5000; // Default to 5000 if PORT is not set
 
-// Middleware
-app.use(cors());
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve static files from 'uploads'
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -27,92 +23,83 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// Define User model
-const UserSchema = new mongoose.Schema({
+
+const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true } // Plain text password - Hash before storing in production
+  password: { type: String, required: true },
 });
 
-const User = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', userSchema);
 
-// Define Course model
-const CourseSchema = new mongoose.Schema({
-  thumbnail: { type: String, required: true },
-  video: { type: String, required: true },
-  description: { type: String, required: true }
+const courseSchema = new mongoose.Schema({
+  description: String,
+  thumbnailUrl: String,
+  videoUrl: String,
 });
 
-const Course = mongoose.model('Course', CourseSchema);
+const Course = mongoose.model('Course', courseSchema);
 
-// Multer configuration for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir);
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to avoid filename collisions
-  }
-});
+app.use(cors()); // Enable CORS
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const upload = multer({ storage });
 
-app.get('/hello', async (req, res) => {
-  res.send("Hello");
+Set up multer for file uploads
+const upload = multer({ dest: 'uploads/' });
+
+app.get("/demo",(req,res)=>{
+  res.send("DemoPages")
 })
 
-
-// Login endpoint
-app.post('/login', async (req, res) => {
+// User login route
+app.post('/logins', async (req, res) => {
   const { email, password } = req.body;
-
   try {
-    const user = await User.findOne({ email });
-
-    if (user && user.password === password) { // Compare plain text passwords - Hash in production
-      res.status(200).json({ message: 'Login successful' });
+    const user = await User.findOne({ email, password });
+    if (user) {
+      res.status(200).json({ message: 'Login successful!' });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(400).json({ message: 'Invalid credentials' });
     }
   } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Upload course endpoint
-app.post('/upload', upload.fields([{ name: 'thumbnail' }, { name: 'video' }]), async (req, res) => {
+// Upload course route
+app.post('/upload', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
   const { description } = req.body;
-  const thumbnail = req.files['thumbnail'] ? req.files['thumbnail'][0].path : '';
-  const video = req.files['video'] ? req.files['video'][0].path : '';
+  const thumbnail = req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+  const video = req.files['video'] ? req.files['video'][0] : null;
 
   if (!description || !thumbnail || !video) {
-    return res.status(400).json({ message: 'Missing required fields' });
+    return res.status(400).json({ message: 'All fields are required.' });
   }
 
   try {
-    const newCourse = new Course({ thumbnail, video, description });
-    await newCourse.save();
+    const course = new Course({
+      description,
+      thumbnailUrl: `http://localhost:${PORT}/uploads/${thumbnail.filename}`,
+      videoUrl: `http://localhost:${PORT}/uploads/${video.filename}`,
+    });
+
+    await course.save();
+
     res.status(200).json({ message: 'Upload successful!' });
-  } catch (err) {
-    console.error('Error during course upload:', err);
-    res.status(500).json({ message: 'Internal server error' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get all courses endpoint
+// Get all courses route
 app.get('/courses', async (req, res) => {
   try {
     const courses = await Course.find();
-    res.status(200).json(courses);
-  } catch (err) {
-    console.error('Error retrieving courses:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    res.json(courses);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // Start server
 app.listen(PORT, () => {
