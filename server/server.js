@@ -23,7 +23,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -42,11 +41,10 @@ const Course = mongoose.model('Course', courseSchema);
 app.use(cors()); // Enable CORS
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-Set up multer for file uploads
+// Set up multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
-app.get("/demo",(req,res)=>{
+app.get("/demo", (req, res) => {
   res.send("DemoPages")
 })
 
@@ -100,8 +98,7 @@ app.get('/courses', async (req, res) => {
   }
 });
 
-
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`); // Corrected the variable name to PORT
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
